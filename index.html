@@ -47,13 +47,91 @@
             opacity: 0.9;
             letter-spacing: 0.5px;
         }
+
+        dialog {
+            padding: 2rem 2.5rem;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            max-width: 420px;
+            font-family: system-ui, sans-serif;
+        }   dialog::backdrop {
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-group {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        button {
+            padding: 0.7rem 1.4rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Eat What Ho </h1>
         <p>Good Morning Good Night </p>
+        <dialog id="pop-up">
+        </dialog>
+        <button type="button" onclick="add_shop_confirm()">add shop</button>
+        <table>
+            <thead>
+                <td>Shop list:</td>
+                <td></td>
+            </thead>
+            <tbody id="shoplist">
+
+            </tbody>
+        </table>
+        <button type="button" onclick="pick_shop()">What should I eat?</button>
     </div>
+
+    <script>
+        const shop_list = document.getElementById("shoplist");
+        const popup = document.getElementById("pop-up");
+        var shop_index=0;
+
+        function add_shop_confirm() {
+            console.log('clicked');
+            popup.innerHTML = 
+            `<h3>Add shop</h3>
+            <p>Please enter the shop name below:</p>
+            <input type="text" id="shopname">
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="add_shop()">Confirm</button>
+            </div>`;
+            popup.showModal();
+        }
+
+        function add_shop(shopname) {
+            shopname = document.getElementById("shopname").value;
+            shop_list.innerHTML += 
+            `<tr id=shop${shop_index}>
+                <td>${shopname}</td>
+                <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
+            </tr>`;
+            shop_index++;
+            popup.close();
+        }
+
+        function delete_shop_confirm(shop_index) {
+
+        }
+
+        function pickshop() {
+
+        }
+    </script>
 </body>
 
 </html>
