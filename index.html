@@ -51,11 +51,14 @@
         dialog {
             padding: 2rem 2.5rem;
             border: none;
+            position: relative;
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.25);
             max-width: 420px;
             font-family: system-ui, sans-serif;
-        }   dialog::backdrop {
+        }
+        
+        dialog::backdrop {
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(4px);
         }
@@ -79,9 +82,7 @@
 <body>
     <div class="container">
         <h1>Eat What Ho </h1>
-        <p>Good Morning Good Night </p>
-        <dialog id="pop-up">
-        </dialog>
+        <dialog id="pop-up"></dialog>
         <button type="button" onclick="add_shop_confirm()">add shop</button>
         <table>
             <thead>
@@ -96,12 +97,13 @@
     </div>
 
     <script>
-        const shop_list = document.getElementById("shoplist");
+        const shop_list_element = document.getElementById("shoplist");
         const popup = document.getElementById("pop-up");
-        var shop_index=0;
+        var shop_list = {};
+        var shop_index = 0;
+        var shop_indices = [];
 
         function add_shop_confirm() {
-            console.log('clicked');
             popup.innerHTML = 
             `<h3>Add shop</h3>
             <p>Please enter the shop name below:</p>
@@ -113,23 +115,58 @@
             popup.showModal();
         }
 
-        function add_shop(shopname) {
+        function add_shop() {
             shopname = document.getElementById("shopname").value;
-            shop_list.innerHTML += 
+            shop_list_element.innerHTML += 
             `<tr id=shop${shop_index}>
                 <td>${shopname}</td>
                 <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
             </tr>`;
+            shop_list[shop_index] = shopname;
+            shop_indices.push(shop_index);
+            console.log(shop_indices);
             shop_index++;
             popup.close();
         }
 
         function delete_shop_confirm(shop_index) {
-
+            popup.innerHTML = 
+            `<h3>Delete shop</h3>
+            <p>Are you sure you want to remove the following shop: ${shop_list[shop_index]}</p>
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="delete_shop(${shop_index})">Confirm</button>
+            </div>`;
+            popup.showModal();
         }
 
-        function pickshop() {
+        function delete_shop(shop_index) {
+            document.getElementById(`shop${shop_index}`).remove();
+            delete shop_list[shop_index];
+            shop_indices = shop_indices.filter((i)=>i != shop_index);
+            console.log(shop_indices);
+            popup.close();
+        }
 
+        function pick_shop() {
+            if (shop_indices.length > 0) {
+                popup.innerHTML = 
+                `<h3>Congratulations</h3>
+                <p>You picked the shop:</p>
+                <h2>${shop_list[shop_indices[Math.floor(Math.random()*shop_indices.length)]]}<h2>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Close</button>
+                </div>`;
+            } else {
+                popup.innerHTML = 
+                `<h3>Invalid shop</h3>
+                <p>Please enter some shops before clicking this button</p>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Close</button>
+                </div>`;
+            }
+            popup.showModal();
+            
         }
     </script>
 </body>
