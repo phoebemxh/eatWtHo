@@ -83,7 +83,13 @@
     <div class="container">
         <h1>Eat What Ho </h1>
         <dialog id="pop-up"></dialog>
-        <button type="button" onclick="add_shop_confirm()">add shop</button>
+        <div class="btn-group">
+            <button type="button" onclick="add_shop_confirm()">add shop</button>
+            <button type="button" onclick="clear_shop_confirm()">clear all</button>
+            <button type="button" onclick="export_data()">export shops</button>
+            <button type="button" onclick="call_file_input()">import shops</button>
+            <input type="file" id="fileInput" accept=".txt" style="display:none;" onchange="import_data(event)">
+        </div>
         <table>
             <thead>
                 <td>Shop list:</td>
@@ -99,13 +105,12 @@
     <script>
         const shop_list_element = document.getElementById("shoplist");
         const popup = document.getElementById("pop-up");
+        const file_input = document.getElementById("fileInput")
         var shop_list = {};
         var shop_index = 0;
         var shop_indices = [];
 
         function create_cookie() {
-            console.log(shop_indices, shop_list);
-            console.log(`shops=${JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}))}`);
             document.cookie = `shops=${JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}))}`;
         }
 
@@ -113,23 +118,65 @@
             return Object.fromEntries(document.cookie.split(";").map((i)=>{return i.split("=").map((j)=>{return j.trim();});}))
         }
 
+        function export_data() {
+            create_cookie();
+            console.log(parse_cookie());
+            console.log(parse_cookie()["shops"]);
+            const blob = new Blob([parse_cookie()["shops"]], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'eatWtHo_export.txt';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function call_file_input() {
+            if (shop_indices.length > 0) {
+                popup.innerHTML = 
+                `<h3>Import shops</h3>
+                <p>The import process will override existing shops. Do you want to continue?</p>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Cancel</button>
+                    <button type="button" onclick="popup.close(); file_input.click();">Confirm</button>
+                </div>`;
+                popup.showModal();
+            } else {
+                file_input.click();
+            }
+        }
+
+        function import_data(event) {
+            var reader = new FileReader();
+            console.log('selected file');
+            reader.onload = function() {
+                document.cookie = "shops=" + reader.result;
+                console.log(parse_cookie());
+                reload_shop_list();
+            };
+            reader.readAsText(event.target.files[0]);
+        }
+
         function reload_shop_list() {
-            let cookies = parse_cookie();
-            console.log(cookies)
-            if ("shops" in cookies) {
-                console.log(cookies.shops);
-                let x = JSON.parse(cookies.shops);
-                shop_index = x.length;
-                shop_indices = Array.from({ length: x.length }, (_, i) => i);
-                shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
-                shop_list_element.innerHTML = "";
-                for (let i = 0; i < x.length; i++) {
-                    shop_list_element.innerHTML += 
-                    `<tr id=shop${i}>
-                        <td>${x[i]}</td>
-                        <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
-                    </tr>`;
-                }
+            var cookies = parse_cookie();
+            if (!"shops" in cookies) {
+                create_cookie();
+            }
+            var x = JSON.parse(cookies.shops);
+            shop_index = x.length;
+            shop_indices = Array.from({ length: x.length }, (_, i) => i);
+            shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
+            shop_list_element.innerHTML = "";
+            for (let i = 0; i < x.length; i++) {
+                shop_list_element.innerHTML += 
+                `<tr id=shop${i}>
+                    <td>${x[i]}</td>
+                    <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
+                </tr>`;
             }
         }
 
@@ -146,7 +193,7 @@
         }
 
         function add_shop() {
-            shopname = document.getElementById("shopname").value;
+            var shopname = document.getElementById("shopname").value;
             shop_list_element.innerHTML += 
             `<tr id=shop${shop_index}>
                 <td>${shopname}</td>
@@ -157,9 +204,29 @@
             shop_index++;
             popup.close();
             create_cookie();
-            if (index > 100 & shop_indices.length*2 < index) {
+            if (shop_index > 100 & shop_indices.length*2 < shop_index) {
                 reload_shop_list();
             }
+        }
+
+        function clear_shop_confirm() {
+            popup.innerHTML = 
+            `<h3>Clear shop</h3>
+            <p>Are you sure you want to clear all shops</p>
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="clear_shop()">Confirm</button>
+            </div>`;
+            popup.showModal();
+        }
+
+        function clear_shop() {
+            shop_list = {};
+            shop_index = 0;
+            shop_indices = [];
+            popup.close();
+            create_cookie();
+            reload_shop_list();
         }
 
         function delete_shop_confirm(shop_index) {
