@@ -103,6 +103,36 @@
         var shop_index = 0;
         var shop_indices = [];
 
+        function create_cookie() {
+            console.log(shop_indices, shop_list);
+            console.log(`shops=${JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}))}`);
+            document.cookie = `shops=${JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}))}`;
+        }
+
+        function parse_cookie() {
+            return Object.fromEntries(document.cookie.split(";").map((i)=>{return i.split("=").map((j)=>{return j.trim();});}))
+        }
+
+        function reload_shop_list() {
+            let cookies = parse_cookie();
+            console.log(cookies)
+            if ("shops" in cookies) {
+                console.log(cookies.shops);
+                let x = JSON.parse(cookies.shops);
+                shop_index = x.length;
+                shop_indices = Array.from({ length: x.length }, (_, i) => i);
+                shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
+                shop_list_element.innerHTML = "";
+                for (let i = 0; i < x.length; i++) {
+                    shop_list_element.innerHTML += 
+                    `<tr id=shop${i}>
+                        <td>${x[i]}</td>
+                        <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
+                    </tr>`;
+                }
+            }
+        }
+
         function add_shop_confirm() {
             popup.innerHTML = 
             `<h3>Add shop</h3>
@@ -124,9 +154,12 @@
             </tr>`;
             shop_list[shop_index] = shopname;
             shop_indices.push(shop_index);
-            console.log(shop_indices);
             shop_index++;
             popup.close();
+            create_cookie();
+            if (index > 100 & shop_indices.length*2 < index) {
+                reload_shop_list();
+            }
         }
 
         function delete_shop_confirm(shop_index) {
@@ -143,9 +176,9 @@
         function delete_shop(shop_index) {
             document.getElementById(`shop${shop_index}`).remove();
             delete shop_list[shop_index];
-            shop_indices = shop_indices.filter((i)=>i != shop_index);
-            console.log(shop_indices);
+            shop_indices = shop_indices.filter((i)=>{return i != shop_index;});
             popup.close();
+            create_cookie();
         }
 
         function pick_shop() {
@@ -166,8 +199,9 @@
                 </div>`;
             }
             popup.showModal();
-            
         }
+        
+        reload_shop_list();
     </script>
 </body>
 
