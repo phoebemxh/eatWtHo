@@ -115,13 +115,15 @@
         }
 
         function parse_cookie() {
-            return Object.fromEntries(document.cookie.split(";").map((i)=>{return i.split("=").map((j)=>{return j.trim();});}))
+            if (document.cookie) {
+                return Object.fromEntries(new Map(document.cookie.split(";").map((i)=>{return i.split("=").map((j)=>{return j.trim();});})));
+            } else {
+                return {};
+            }
         }
 
         function export_data() {
             create_cookie();
-            console.log(parse_cookie());
-            console.log(parse_cookie()["shops"]);
             const blob = new Blob([parse_cookie()["shops"]], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
 
@@ -152,10 +154,8 @@
 
         function import_data(event) {
             var reader = new FileReader();
-            console.log('selected file');
             reader.onload = function() {
                 document.cookie = "shops=" + reader.result;
-                console.log(parse_cookie());
                 reload_shop_list();
             };
             reader.readAsText(event.target.files[0]);
@@ -163,20 +163,22 @@
 
         function reload_shop_list() {
             var cookies = parse_cookie();
-            if (!"shops" in cookies) {
+            if (!("shops" in cookies)) {
                 create_cookie();
-            }
-            var x = JSON.parse(cookies.shops);
-            shop_index = x.length;
-            shop_indices = Array.from({ length: x.length }, (_, i) => i);
-            shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
-            shop_list_element.innerHTML = "";
-            for (let i = 0; i < x.length; i++) {
-                shop_list_element.innerHTML += 
-                `<tr id=shop${i}>
-                    <td>${x[i]}</td>
-                    <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
-                </tr>`;
+            } else {
+                var x = JSON.parse(cookies["shops"]);
+                console.log(x)
+                shop_index = x.length;
+                shop_indices = Array.from({ length: x.length }, (_, i) => i);
+                shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
+                shop_list_element.innerHTML = "";
+                for (let i = 0; i < x.length; i++) {
+                    shop_list_element.innerHTML += 
+                    `<tr id=shop${i}>
+                        <td>${x[i]}</td>
+                        <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
+                    </tr>`;
+                }
             }
         }
 
