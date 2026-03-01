@@ -110,8 +110,19 @@
         var shop_index = 0;
         var shop_indices = [];
 
+        function compose_data() {
+            return JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}));
+        }
+
+        function parse_data(shops) {
+            const x = JSON.parse(shops);
+            shop_index = x.length;
+            shop_indices = Array.from({ length: x.length }, (_, i) => i);
+            shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
+        }
+
         function create_cookie() {
-            document.cookie = `shops=${JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}))}`;
+            document.cookie = `shops=${compose_data()}`;
         }
 
         function parse_cookie() {
@@ -124,7 +135,7 @@
 
         function export_data() {
             create_cookie();
-            const blob = new Blob([parse_cookie()["shops"]], { type: 'text/plain' });
+            const blob = new Blob([compose_data()], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
 
             const a = document.createElement('a');
@@ -155,7 +166,9 @@
         function import_data(event) {
             var reader = new FileReader();
             reader.onload = function() {
-                document.cookie = "shops=" + reader.result;
+                const x = reader.result;
+                document.cookie = "shops=" + x;
+                parse_data(x);
                 reload_shop_list();
             };
             reader.readAsText(event.target.files[0]);
@@ -164,21 +177,18 @@
         function reload_shop_list() {
             var cookies = parse_cookie();
             if (!("shops" in cookies)) {
-                create_cookie();
+                cookies = compose_data();
             } else {
-                var x = JSON.parse(cookies["shops"]);
-                console.log(x)
-                shop_index = x.length;
-                shop_indices = Array.from({ length: x.length }, (_, i) => i);
-                shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
-                shop_list_element.innerHTML = "";
-                for (let i = 0; i < x.length; i++) {
-                    shop_list_element.innerHTML += 
-                    `<tr id=shop${i}>
-                        <td>${x[i]}</td>
-                        <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
-                    </tr>`;
-                }
+                cookies = cookies["shops"];
+            }
+            parse_data(cookies);
+            shop_list_element.innerHTML = "";
+            for (let i = 0; i < shop_indices.length; i++) {
+                shop_list_element.innerHTML += 
+                `<tr id=shop${i}>
+                    <td>${shop_list[i]}</td>
+                    <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
+                </tr>`;
             }
         }
 
@@ -206,7 +216,11 @@
             shop_index++;
             popup.close();
             create_cookie();
-            if (shop_index > 100 & shop_indices.length*2 < shop_index) {
+            reshuffle_shops();
+        }
+
+        function reshuffle_shops() {
+            if (shop_index > 0 & shop_indices.length*2 < shop_index) {
                 reload_shop_list();
             }
         }
@@ -248,6 +262,7 @@
             shop_indices = shop_indices.filter((i)=>{return i != shop_index;});
             popup.close();
             create_cookie();
+            reshuffle_shops();
         }
 
         function pick_shop() {
