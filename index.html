@@ -82,7 +82,7 @@
 <body>
     <div class="container">
         <h1>Eat What Ho </h1>
-        <dialog id="pop-up"></dialog>
+        <dialog id="popup"></dialog>
         <div class="btn-group">
             <button type="button" onclick="add_shop_confirm()">add shop</button>
             <button type="button" onclick="clear_shop_confirm()">clear all</button>
@@ -104,7 +104,7 @@
 
     <script>
         const shop_list_element = document.getElementById("shoplist");
-        const popup = document.getElementById("pop-up");
+        const popup = document.getElementById("popup");
         const file_input = document.getElementById("fileInput")
         var shop_list = {};
         var shop_index = 0;
@@ -197,6 +197,7 @@
             `<h3>Add shop</h3>
             <p>Please enter the shop name below:</p>
             <input type="text" id="shopname">
+            <p id="popup_err" style="color: red;"><p>
             <div class="btn-group">
                 <button type="button" onclick="popup.close()">Cancel</button>
                 <button type="button" onclick="add_shop()">Confirm</button>
@@ -206,17 +207,21 @@
 
         function add_shop() {
             var shopname = document.getElementById("shopname").value;
-            shop_list_element.innerHTML += 
-            `<tr id=shop${shop_index}>
-                <td>${shopname}</td>
-                <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
-            </tr>`;
-            shop_list[shop_index] = shopname;
-            shop_indices.push(shop_index);
-            shop_index++;
-            popup.close();
-            create_cookie();
-            reshuffle_shops();
+            if (shopname.length > 0) {
+                shop_list_element.innerHTML += 
+                `<tr id=shop${shop_index}>
+                    <td>${shopname}</td>
+                    <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
+                </tr>`;
+                shop_list[shop_index] = shopname;
+                shop_indices.push(shop_index);
+                shop_index++;
+                popup.close();
+                create_cookie();
+                reshuffle_shops();
+            } else {
+                document.getElementById("popup_err").innerHTML = "Shop name cannot be empty!"
+            }
         }
 
         function reshuffle_shops() {
