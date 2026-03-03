@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Hello World Page</title>
+    <title>Eat Wt Ho?</title>
     <style>
         * {
             margin: 0;
@@ -105,7 +105,7 @@
     <script>
         const shop_list_element = document.getElementById("shoplist");
         const popup = document.getElementById("popup");
-        const file_input = document.getElementById("fileInput")
+        const file_input = document.getElementById("fileInput");
         var shop_list = {};
         var shop_index = 0;
         var shop_indices = [];
@@ -114,27 +114,18 @@
             return JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}));
         }
 
-        function parse_data(shops) {
-            const x = JSON.parse(shops);
-            shop_index = x.length;
-            shop_indices = Array.from({ length: x.length }, (_, i) => i);
-            shop_list = Object.fromEntries(shop_indices.map((i)=>{return [i, x[i]];}));
+        function parse_data(data) {
+            return JSON.parse(data);
         }
 
-        function create_cookie() {
-            document.cookie = `shops=${compose_data()}`;
-        }
-
-        function parse_cookie() {
-            if (document.cookie) {
-                return Object.fromEntries(new Map(document.cookie.split(";").map((i)=>{return i.split("=").map((j)=>{return j.trim();});})));
-            } else {
-                return {};
+        function init_shops_from_array(arr) {
+            clear_shop();
+            for (let i = 0; i < arr.length; i++) {
+                add_shop(arr[i]);
             }
         }
 
         function export_data() {
-            create_cookie();
             const blob = new Blob([compose_data()], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
 
@@ -166,30 +157,17 @@
         function import_data(event) {
             var reader = new FileReader();
             reader.onload = function() {
-                const x = reader.result;
-                document.cookie = "shops=" + x;
-                parse_data(x);
-                reload_shop_list();
+                init_shops_from_array(parse_data(reader.result));
             };
             reader.readAsText(event.target.files[0]);
         }
 
         function reload_shop_list() {
-            var cookies = parse_cookie();
-            if (!("shops" in cookies)) {
-                cookies = compose_data();
-            } else {
-                cookies = cookies["shops"];
-            }
-            parse_data(cookies);
-            shop_list_element.innerHTML = "";
-            for (let i = 0; i < shop_indices.length; i++) {
-                shop_list_element.innerHTML += 
-                `<tr id=shop${i}>
-                    <td>${shop_list[i]}</td>
-                    <td><button type="button" onclick="delete_shop_confirm(${i})">delete</button></td>
-                </tr>`;
-            }
+            init_shops_from_array(Object.keys(localStorage)
+                .filter((i)=>{return (i.slice(0,4))==="shop";})
+                .map((i)=>{return parseInt(i.slice(4,));})
+                .sort()
+                .map((i)=>{return localStorage.getItem(`shop${i}`);}));
         }
 
         function add_shop_confirm() {
@@ -200,28 +178,35 @@
             <p id="popup_err" style="color: red;"><p>
             <div class="btn-group">
                 <button type="button" onclick="popup.close()">Cancel</button>
-                <button type="button" onclick="add_shop()">Confirm</button>
+                <button type="button" onclick="add_shop_action()">Confirm</button>
             </div>`;
             popup.showModal();
         }
 
-        function add_shop() {
-            var shopname = document.getElementById("shopname").value;
-            if (shopname.length > 0) {
-                shop_list_element.innerHTML += 
-                `<tr id=shop${shop_index}>
-                    <td>${shopname}</td>
-                    <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
-                </tr>`;
-                shop_list[shop_index] = shopname;
-                shop_indices.push(shop_index);
-                shop_index++;
-                popup.close();
-                create_cookie();
-                reshuffle_shops();
-            } else {
-                document.getElementById("popup_err").innerHTML = "Shop name cannot be empty!"
+        function add_shop_action() {
+            add_shop(document.getElementById("shopname").value);
+        }
+
+        function add_shop(shopname) {
+            if (shopname.length <= 0) {
+                document.getElementById("popup_err").innerHTML = "Shop name cannot be empty!";
+                return;
             }
+            if (shopname.length >= 16384) {
+                document.getElementById("popup_err").innerHTML = "Shop name can only have a maximum of 16384 characters";
+                return;
+            }
+            shop_list_element.innerHTML += 
+            `<tr id=shop${shop_index}>
+                <td>${shopname}</td>
+                <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
+            </tr>`;
+            shop_list[shop_index] = shopname;
+            localStorage.setItem(`shop${shop_index}`, shopname);
+            shop_indices.push(shop_index);
+            shop_index++;
+            popup.close();
+            reshuffle_shops();
         }
 
         function reshuffle_shops() {
@@ -245,9 +230,9 @@
             shop_list = {};
             shop_index = 0;
             shop_indices = [];
+            localStorage.clear();
+            shop_list_element.innerHTML = "";
             popup.close();
-            create_cookie();
-            reload_shop_list();
         }
 
         function delete_shop_confirm(shop_index) {
@@ -265,8 +250,8 @@
             document.getElementById(`shop${shop_index}`).remove();
             delete shop_list[shop_index];
             shop_indices = shop_indices.filter((i)=>{return i != shop_index;});
+            localStorage.removeItem(`shop${shop_index}`);
             popup.close();
-            create_cookie();
             reshuffle_shops();
         }
 
