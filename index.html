@@ -3,14 +3,280 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Hello World Page</title>
-    <link rel="stylesheet" href="/eatWtHo/style.css">
+    <title>Eat Wt Ho?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: system-ui, -apple-system, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        h1 {
+            font-size: 5.5rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #fff, #e0f7fa, #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        p {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+        }
+
+        dialog {
+            padding: 2rem 2.5rem;
+            border: none;
+            position: relative;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            max-width: 420px;
+            font-family: system-ui, sans-serif;
+        }
+        
+        dialog::backdrop {
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-group {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        button {
+            padding: 0.7rem 1.4rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Eat What Ho </h1>
-        <p>Good Morning </p>
+        <dialog id="popup"></dialog>
+        <div class="btn-group">
+            <button type="button" onclick="add_shop_confirm()">add shop</button>
+            <button type="button" onclick="clear_shop_confirm()">clear all</button>
+            <button type="button" onclick="export_data()">export shops</button>
+            <button type="button" onclick="call_file_input()">import shops</button>
+            <input type="file" id="fileInput" accept=".txt" style="display:none;" onchange="import_data(event)">
+        </div>
+        <table>
+            <thead>
+                <td>Shop list:</td>
+                <td></td>
+            </thead>
+            <tbody id="shoplist">
+
+            </tbody>
+        </table>
+        <button type="button" onclick="pick_shop()">What should I eat?</button>
     </div>
+
+    <script>
+        const shop_list_element = document.getElementById("shoplist");
+        const popup = document.getElementById("popup");
+        const file_input = document.getElementById("fileInput");
+        var shop_list = {};
+        var shop_index = 0;
+        var shop_indices = [];
+
+        function compose_data() {
+            return JSON.stringify(shop_indices.map((i)=>{return shop_list[i];}));
+        }
+
+        function parse_data(data) {
+            return JSON.parse(data);
+        }
+
+        function init_shops_from_array(arr) {
+            clear_shop();
+            for (let i = 0; i < arr.length; i++) {
+                add_shop(arr[i]);
+            }
+        }
+
+        function export_data() {
+            const blob = new Blob([compose_data()], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'eatWtHo_export.txt';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function call_file_input() {
+            if (shop_indices.length > 0) {
+                popup.innerHTML = 
+                `<h3>Import shops</h3>
+                <p>The import process will override existing shops. Do you want to continue?</p>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Cancel</button>
+                    <button type="button" onclick="popup.close(); file_input.click();">Confirm</button>
+                </div>`;
+                popup.showModal();
+            } else {
+                file_input.click();
+            }
+        }
+
+        function import_data(event) {
+            var reader = new FileReader();
+            reader.onload = function() {
+                init_shops_from_array(parse_data(reader.result));
+            };
+            reader.readAsText(event.target.files[0]);
+        }
+
+        function reload_shop_list() {
+            init_shops_from_array(Object.keys(localStorage)
+                .filter((i)=>{return (i.slice(0,4))==="shop";})
+                .map((i)=>{return parseInt(i.slice(4,));})
+                .sort()
+                .map((i)=>{return localStorage.getItem(`shop${i}`);}));
+        }
+
+        function add_shop_confirm() {
+            popup.innerHTML = 
+            `<h3>Add shop</h3>
+            <p>Please enter the shop name below:</p>
+            <input type="text" id="shopname">
+            <p id="popup_err" style="color: red;"><p>
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="add_shop_action()">Confirm</button>
+            </div>`;
+            popup.showModal();
+        }
+
+        function add_shop_action() {
+            add_shop(document.getElementById("shopname").value);
+        }
+
+        function add_shop(shopname) {
+            if (shopname.length <= 0) {
+                document.getElementById("popup_err").innerHTML = "Shop name cannot be empty!";
+                return;
+            }
+            if (shopname.length >= 16384) {
+                document.getElementById("popup_err").innerHTML = "Shop name can only have a maximum of 16384 characters";
+                return;
+            }
+            shop_list_element.innerHTML += 
+            `<tr id=shop${shop_index}>
+                <td>${shopname}</td>
+                <td><button type="button" onclick="delete_shop_confirm(${shop_index})">delete</button></td>
+            </tr>`;
+            shop_list[shop_index] = shopname;
+            localStorage.setItem(`shop${shop_index}`, shopname);
+            shop_indices.push(shop_index);
+            shop_index++;
+            popup.close();
+            reshuffle_shops();
+        }
+
+        function reshuffle_shops() {
+            if (shop_index > 0 & shop_indices.length*2 < shop_index) {
+                reload_shop_list();
+            }
+        }
+
+        function clear_shop_confirm() {
+            popup.innerHTML = 
+            `<h3>Clear shop</h3>
+            <p>Are you sure you want to clear all shops</p>
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="clear_shop()">Confirm</button>
+            </div>`;
+            popup.showModal();
+        }
+
+        function clear_shop() {
+            shop_list = {};
+            shop_index = 0;
+            shop_indices = [];
+            localStorage.clear();
+            shop_list_element.innerHTML = "";
+            popup.close();
+        }
+
+        function delete_shop_confirm(shop_index) {
+            popup.innerHTML = 
+            `<h3>Delete shop</h3>
+            <p>Are you sure you want to remove the following shop: ${shop_list[shop_index]}</p>
+            <div class="btn-group">
+                <button type="button" onclick="popup.close()">Cancel</button>
+                <button type="button" onclick="delete_shop(${shop_index})">Confirm</button>
+            </div>`;
+            popup.showModal();
+        }
+
+        function delete_shop(shop_index) {
+            document.getElementById(`shop${shop_index}`).remove();
+            delete shop_list[shop_index];
+            shop_indices = shop_indices.filter((i)=>{return i != shop_index;});
+            localStorage.removeItem(`shop${shop_index}`);
+            popup.close();
+            reshuffle_shops();
+        }
+
+        function pick_shop() {
+            if (shop_indices.length > 0) {
+                popup.innerHTML = 
+                `<h3>Congratulations</h3>
+                <p>You picked the shop:</p>
+                <h2>${shop_list[shop_indices[Math.floor(Math.random()*shop_indices.length)]]}<h2>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Close</button>
+                </div>`;
+            } else {
+                popup.innerHTML = 
+                `<h3>Invalid shop</h3>
+                <p>Please enter some shops before clicking this button</p>
+                <div class="btn-group">
+                    <button type="button" onclick="popup.close()">Close</button>
+                </div>`;
+            }
+            popup.showModal();
+        }
+        
+        reload_shop_list();
+    </script>
 </body>
 
 </html>
